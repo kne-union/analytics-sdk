@@ -35,7 +35,7 @@
       "api": "log",
       "data": {
         "serialNumber": "$element.data.serialNumber",
-        "language": "$element.data.language",
+        "language": "@basic.language",
         "goalId": "$element.data.goalId",
         "stageId": "$element.data.stageId",
         "type": "$element.data.type"
