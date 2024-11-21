@@ -1,7 +1,20 @@
-import { createFunction } from '@kne/create-props';
-import { EventEmitter } from 'fbemitter';
-import axios from 'axios';
-import { get, merge, isPlainObject, transform, omit } from 'lodash';
+import get from 'lodash/get';
+import merge from 'lodash/get';
+import isPlainObject from 'lodash/isPlainObject';
+import transform from 'lodash/transform';
+import omit from 'lodash/omit';
+
+const axios = options => {
+  const { url, ...requestOptions } = Object.assign({}, options);
+  return fetch(url, requestOptions)
+    .then(async response => {
+      const data = await response.json();
+      return { data };
+    })
+    .catch(error => {
+      return {};
+    });
+};
 
 const createFingerprint = domain => {
   let fingerprint;
@@ -82,59 +95,26 @@ const objectDataFormat = (target, data) => {
   return core(target);
 };
 
-const emitter = new EventEmitter();
-
-// 事件触发器实现
-export const eventTrigger = createFunction(
-  'eventTrigger',
-  z => {
-    return {
-      args: [
-        z
-          .object({
-            name: z.string().describe('事件名称'),
-            data: z.object({}).passthrough().describe('上报数据')
-          })
-          .required({ name: true })
-      ]
-    };
-  },
-  ''
-)(({ name, data }) => {
-  //基础信息收集 1. 所在页面url localStorage sessionStorage cookie navigator.userAgent navigator.language 视口大小 页面滚动位置
-  emitter.emit(`acs-event-trigger`, { name, data });
-});
-
 // 初始化
-const init = createFunction(
-  'init',
-  z => {
-    return {
-      args: [
-        z.string().describe('系统唯一标识'),
-        z
-          .object({
-            version: z.string().default('0.0.1').describe('系统版本'),
-            lastPublishTimestamp: z.number().default(0).describe('系统最后发布时间'),
-            reportAdapterUrl: z.string().describe('上报适配器配置url地址'),
-            cacheTime: z.number().default(0).describe('上报缓存时间'),
-            eventName: z.string().default('acs-event-trigger').describe('事件名称'),
-            uuidName: z.string().default('_acs_uuid').describe('uuid的localStorage存储key'),
-            fingerprintName: z.string().default('_acs_fingerprint').describe('fingerprint的localStorage存储key'),
-            getScrollElement: z
-              .function()
-              .returns(z.object({}).passthrough().describe('scrollElement'))
-              .default(() => document.documentElement)
-              .describe('页面滚动元素')
-          })
-          .passthrough()
-          .default({})
-          .describe('可选参数')
-      ]
-    };
-  },
-  '初始化'
-)(async (systemName, { version, lastPublishTimestamp, reportAdapterUrl, cacheTime, uuidName, fingerprintName, eventName, getScrollElement }) => {
+const init = async (systemName, options) => {
+  const { version, lastPublishTimestamp, reportAdapterUrl, cacheTime, uuidName, fingerprintName, eventName, getScrollElement } = Object.assign(
+    {},
+    {
+      cacheTime: 0,
+      eventName: 'acs-event-trigger',
+      uuidName: '_acs_uuid',
+      fingerprintName: '_acs_fingerprint',
+      getScrollElement: () => document.documentElement
+    },
+    options
+  );
+  const eventTrigger = ({ name, data }) => {
+    const event = new CustomEvent(eventName, {
+      detail: { name, data }
+    });
+
+    document.dispatchEvent(event);
+  };
   performance.mark('first-contentful-paint');
   //页面加载
   document.addEventListener('DOMContentLoaded', () => {
@@ -160,7 +140,7 @@ const init = createFunction(
     window.localStorage.setItem(uuidName, uuid);
   }
 
-  const { data } = await axios.get(reportAdapterUrl);
+  const { data } = await axios({ url: reportAdapterUrl, method: 'GET' });
   let reportOptions = data;
 
   const reportAction = (({ cacheTime }) => {
@@ -184,7 +164,7 @@ const init = createFunction(
         cache[name].push(option);
         return;
       }
-      axios(omit(option, ['paramsType']));
+      axios(omit(option, ['paramsType'])).catch(() => {});
     };
   })({ cacheTime });
 
@@ -212,7 +192,8 @@ const init = createFunction(
     true
   );
 
-  emitter.addListener(eventName, ({ name, data }) => {
+  document.addEventListener(eventName, e => {
+    const { name, data } = e.detail;
     const url = window.location.href,
       time = Date.now();
 
@@ -300,6 +281,29 @@ const init = createFunction(
 
     reportAction(apiName, Object.assign({}, api, { [api.paramsType]: requestData }));
   });
-});
 
-export default init;
+  document.addEventListener(
+    'error',
+    error => {
+      eventTrigger({
+        name: 'error',
+        data: {
+          message: error.message,
+          stack: error.stack
+        }
+      });
+    },
+    true
+  );
+
+  const sendRequest = options => {
+    eventTrigger({
+      name: 'ajax',
+      data: options
+    });
+  };
+
+  return { eventTrigger, sendRequest };
+};
+
+export { init };

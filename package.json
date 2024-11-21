@@ -1,11 +1,12 @@
 {
   "name": "@kne/analytics-sdk",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "完成用户行为的分析上报",
   "syntax": {
     "esmodules": true
   },
   "main": "dist/index.js",
+  "module": "dist/index.modern.js",
   "source": "src/index.js",
   "scripts": {
     "init": "husky && npm run init-example",
@@ -14,8 +15,8 @@
     "init-example": "modules-dev-libs-init",
     "build:md": "npx @kne/md-doc",
     "start:md": "npx @kne/md-doc --watch",
-    "build:lib": "microbundle --format umd -o dist/index.js --no-pkg-main",
-    "start:lib": "microbundle --format umd -o dist/index.js --no-pkg-main watch --no-compress",
+    "build:lib": "microbundle --format modern,cjs,umd",
+    "start:lib": "microbundle --format modern,cjs,umd watch --no-compress",
     "build:example": "cd example && npm run build",
     "start:example": "cd example && npm run start",
     "test:build": "run-s build",
@@ -75,9 +76,6 @@
   "devDependencies": {
     "@kne/microbundle": "^0.15.5",
     "@kne/modules-dev": "^2.0.33",
-    "@kne/create-props": "^0.1.6",
-    "axios": "^1.7.7",
-    "fbemitter": "^3.0.0",
     "cross-env": "^7.0.3",
     "husky": "^9.0.11",
     "npm-run-all": "^4.1.5",
