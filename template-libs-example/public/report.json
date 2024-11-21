@@ -1,0 +1,45 @@
+{
+  "defaultApi": "log",
+  "apis": {
+    "log": {
+      "url": "/api/v1/tool/welcome/action_list",
+      "method": "POST",
+      "paramsType": "data",
+      "data": {
+        "platform": "$basic.systemName",
+        "module": "$ruleProps.module",
+        "action": "$ruleProps.action",
+        "coID": "$localInfo.localStorage.ACCOUNT_COID",
+        "actionTime": "$basic.time"
+      }
+    }
+  },
+  "localInfo": {
+    "localStorage": [
+      "ACCOUNT_COID"
+    ]
+  },
+  "rules": [
+    {
+      "title": "查阅内部资源",
+      "props": {
+        "module": "media",
+        "action": "browse"
+      },
+      "matcher": [
+        {
+          "eventName": "click",
+          "elementId": "check-inner-resource"
+        }
+      ],
+      "api": "log",
+      "data": {
+        "serialNumber": "$element.data.serialNumber",
+        "language": "$element.data.language",
+        "goalId": "$element.data.goalId",
+        "stageId": "$element.data.stageId",
+        "type": "$element.data.type"
+      }
+    }
+  ]
+}
